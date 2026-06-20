@@ -214,16 +214,61 @@ MutationObserver 登録 ──▶ DOM 変化のたびに再フィルタ（冪等
 
 ---
 
-## 8. 開発・ロード方法（予定）
+## 8. Firefox への導入手順
+
+> 💡 **ビルドは不要です。** この拡張は素の JavaScript / CSS / HTML で書かれており、リポジトリ内の
+> `manifest.json` と `src/` が**そのまま拡張機能の実体**です。変換（コンパイル/バンドル）なしで
+> Firefox にそのまま読み込めます。
+
+### 8.1 ソースを取得する
 
 ```bash
-# 依存インストール & ビルド（実装フェーズ以降）
-npm install
-npm run build
-
-# Firefox で一時読み込み
-# about:debugging → This Firefox → Load Temporary Add-on
-# → dist/manifest.json を選択
+git clone https://github.com/taka-kawah/firefox-instagram-extension.git
+cd firefox-instagram-extension
 ```
 
-> 本コミット時点では設計ドキュメント（本 README）のみ。実装は上記ロードマップに沿って追加していきます。
+> すでに ZIP でダウンロードした場合は、展開したフォルダ（直下に `manifest.json` がある階層）を使います。
+
+### 8.2 Firefox に一時的に読み込む（開発・お試し用）
+
+1. Firefox のアドレスバーに `about:debugging` と入力して開く
+2. 左メニューの **「このFirefox」**（This Firefox）をクリック
+3. **「一時的なアドオンを読み込む…」**（Load Temporary Add-on…）をクリック
+4. このリポジトリ**直下の `manifest.json`** を選択する（`src/` の中ではなくトップ階層のもの）
+5. 一覧に「Instagram フォーカスフィルター」が表示されれば成功。`https://www.instagram.com/` を開いて動作を確認する
+
+> ℹ️ **「一時的なアドオン」は Firefox を再起動すると消えます**（開発・確認用のため）。
+> 常用したい場合は 8.4 のパッケージ化＋署名を行ってください。
+>
+> 🔧 読み込み後にコードを編集したときは、`about:debugging` の当該アドオンにある
+> **「再読み込み」**（Reload）を押すと最新の状態に更新できます。
+
+### 8.3 動作確認（任意）
+
+ロジックの自動テストを実行できます（Node.js が必要）。
+
+```bash
+npm install   # 開発用依存（jsdom）を入れる
+npm test      # node --test でユニット/統合テストを実行
+```
+
+### 8.4 配布・常用するためのパッケージ化（.xpi 作成）
+
+一時読み込みではなく恒久的にインストールするには、ZIP 化して `.xpi` を作り、Mozilla の署名を受ける必要があります。
+
+```bash
+# リポジトリ直下で実行。manifest.json が ZIP の最上位に来るように固める
+zip -r -FS ../instagram-focus-filter.xpi . \
+  -x '.git/*' 'node_modules/*' 'test/*' 'verification/*' '*.md'
+```
+
+- **署名なしの恒久インストールは通常版 Firefox では不可**です。次のいずれかを使います。
+  - **Mozilla Add-ons (AMO) での署名**: [`web-ext`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/) を使うのが簡単です。
+    ```bash
+    npx web-ext sign --api-key=<JWT issuer> --api-secret=<JWT secret>
+    ```
+    （AMO のアカウントと API キーが必要。自分用なら「自己流通（unlisted）」での署名も可能）
+  - **署名不要で常用したい場合**: [Firefox Developer Edition](https://www.mozilla.org/firefox/developer/) または ESR で
+    `about:config` の `xpinstall.signatures.required` を `false` にする方法もあります（通常版では不可）。
+
+> パッケージ化・AMO 申請の整備は README ロードマップの**フェーズ5**で本格対応予定です。
