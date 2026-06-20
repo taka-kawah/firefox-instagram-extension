@@ -36,5 +36,11 @@
       "css": ["src/styles/hide.css"],
       "run_at": "document_start"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/page/interceptor.js"],
+      "matches": ["https://www.instagram.com/*"]
+    }
   ]
 }
