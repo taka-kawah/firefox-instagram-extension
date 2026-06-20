@@ -17,6 +17,7 @@ const IFF_DEFAULTS = {
   hideSuggestedFeed: true, // ホームのおすすめ投稿を隠す
   hideReelsNav: true, // 左メニューのリール導線を隠す
   hideExploreGrid: true, // 発見ページのおすすめグリッドを隠す
+  hideSponsored: false, // 広告（Sponsored）投稿を隠す（任意機能・既定OFF）
 };
 
 // browser.* / chrome.* を呼び出し時点で解決する（テストからモックを差し替えやすくするため）。

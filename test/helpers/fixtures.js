@@ -31,6 +31,10 @@ const HOME_HTML = `<!DOCTYPE html>
         <header><span>Suggested for you</span></header>
         <div>knkown account post (English label)</div>
       </article>
+      <article id="post-sponsored">
+        <header><span>Sponsored</span></header>
+        <div>広告投稿</div>
+      </article>
     </main>
   </body>
 </html>`;
