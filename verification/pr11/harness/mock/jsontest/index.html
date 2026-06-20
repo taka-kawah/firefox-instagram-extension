@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Method B JSON intercept demo</title>
+<style>
+  body{font-family:-apple-system,"Hiragino Sans",Meiryo,sans-serif;padding:28px;font-size:15px;line-height:1.8;color:#111}
+  h1{font-size:18px}
+  .box{border:1px solid #dbdbdb;border-radius:10px;padding:14px 18px;margin:14px 0;background:#fafafa}
+  .k{color:#737373}
+  code{background:#eee;padding:1px 5px;border-radius:4px}
+  #immediate{color:#b00}
+  #delayed{color:#070}
+</style>
+</head>
+<body>
+  <h1>方式B（JSONインターセプト）デモ</h1>
+  <p class="k">同じフィードJSON（全5件＝フォロー2＋おすすめ/広告3）を <code>JSON.parse</code> で2回パースし、
+  残った件数を表示します。拡張のインターセプタが <code>window.JSON.parse</code> をフックできていれば、
+  おすすめ/広告が除かれて <b>2件</b>になります。</p>
+  <div class="box"><b>即時</b>（ページ読込直後にパース）: <span id="immediate">...</span></div>
+  <div class="box"><b>遅延</b>（2秒後にパース）: <span id="delayed">...</span></div>
+
+  <script>
+    var FEED = JSON.stringify({
+      data: { xdt_api__v1__feed__timeline__connection: { edges: [
+        { node: { id: "follow-1" } },
+        { node: { explore_story: { id: "s1" } } },
+        { node: { id: "follow-2" } },
+        { injected: { label: "Suggested for you" } },
+        { node: { media: { is_sponsored: true } } }
+      ] } }
+    });
+    function describe(parsed){
+      var e = parsed.data.xdt_api__v1__feed__timeline__connection.edges;
+      var ids = e.map(function(x){ return x.node && x.node.id ? x.node.id : "(おすすめ/広告)"; });
+      return e.length + " 件 [" + ids.join(", ") + "]";
+    }
+    // 即時: この時点ではインターセプタ(外部src)がまだ実行されていない可能性がある
+    document.getElementById("immediate").textContent = describe(JSON.parse(FEED));
+    // 遅延: インターセプタ実行後
+    setTimeout(function(){
+      document.getElementById("delayed").textContent = describe(JSON.parse(FEED));
+    }, 2000);
+  </script>
+</body>
+</html>
