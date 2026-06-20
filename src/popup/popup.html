@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Instagram フォーカスフィルター</title>
+  </head>
+  <body>
+    <h1>Instagram フォーカスフィルター</h1>
+
+    <label class="row master">
+      <span>拡張機能を有効にする</span>
+      <input type="checkbox" id="enabled" />
+    </label>
+
+    <div class="group" id="group">
+      <label class="row">
+        <span>ホームのおすすめ投稿を非表示</span>
+        <input type="checkbox" id="hideSuggestedFeed" />
+      </label>
+      <label class="row">
+        <span>リール導線（左メニュー）を非表示</span>
+        <input type="checkbox" id="hideReelsNav" />
+      </label>
+      <label class="row">
+        <span>発見ページのおすすめを非表示</span>
+        <input type="checkbox" id="hideExploreGrid" />
+      </label>
+    </div>
+
+    <p class="hint">設定はすぐに反映されます（ページの再読み込みは不要です）。</p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

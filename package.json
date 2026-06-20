@@ -1,0 +1,13 @@
+{
+  "name": "instagram-focus-filter",
+  "version": "0.1.0",
+  "description": "Firefox 拡張機能「Instagram フォーカスフィルター」のテスト/開発用設定",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
