@@ -10,7 +10,7 @@ const assert = require("node:assert/strict");
 const { createBrowserMock, loadInWindow, readSrc, tick } = require("../helpers/harness.js");
 
 const POPUP_HTML = readSrc("src/popup/popup.html");
-const POPUP_SCRIPTS = ["src/popup/popup.js"];
+const POPUP_SCRIPTS = ["src/shared/settings.js", "src/popup/popup.js"];
 
 async function setupPopup(initialSettings = {}) {
   const browser = createBrowserMock(initialSettings);
@@ -48,7 +48,11 @@ test("トグルを操作するとストレージへ保存される", async () =>
   cb.dispatchEvent(new window.Event("change"));
   await tick(window);
 
-  assert.equal(browser.__store.hideReelsNav, false, "OFF にした設定がストレージへ保存される");
+  assert.equal(
+    browser.__stores.sync.hideReelsNav,
+    false,
+    "OFF にした設定が sync ストレージへ保存される"
+  );
 
   window.close();
 });
