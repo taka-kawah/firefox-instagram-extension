@@ -1,0 +1,25 @@
+/*
+ * hide.css
+ *
+ * 「常に同じ要素を隠す」種類のものは、JavaScript で消すより CSS で消すほうが
+ * 軽量で速く、表示後に一瞬見えてしまう「チラつき」も起きにくい。
+ *
+ * 各ルールは <html> に付く目印属性で有効/無効が切り替わる。
+ * 目印は content.js が設定のオン/オフに応じて付け外しする。
+ *   - data-iff-hide-reels   … リール導線を隠す
+ *   - data-iff-hide-explore … 発見ページトップのおすすめを隠す
+ */
+
+/* (2) 左メニューの「リール」への導線を隠す。
+ *     サイドナビのリンクは href="/reels/" を持つため、それを目印にする。 */
+html[data-iff-hide-reels] a[href="/reels/"] {
+  display: none !important;
+}
+
+/* (3) 発見（Explore）ページのおすすめ投稿グリッドを隠す。
+ *     サムネイルは投稿(/p/...)やリール(/reel/...)へのリンクなので、それらを隠す。
+ *     検索バーなどリンク以外の要素は残るため、「検索はできるがおすすめは見えない」状態になる。 */
+html[data-iff-hide-explore] main a[href*="/p/"],
+html[data-iff-hide-explore] main a[href*="/reel/"] {
+  display: none !important;
+}

@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Instagram フォーカスフィルター",
+  "version": "0.1.0",
+  "description": "Instagram のホームから「おすすめ投稿」を消し、リール動画への導線を隠し、発見ページのおすすめを非表示にして、フォロー中の投稿に集中できるようにします。",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "instagram-focus-filter@example.com",
+      "strict_min_version": "115.0"
+    }
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "action": {
+    "default_title": "Instagram フォーカスフィルター",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "48": "icons/icon.svg",
+      "96": "icons/icon.svg"
+    }
+  },
+  "background": {
+    "scripts": ["src/background/background.js"]
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["src/content/labels.js", "src/content/content.js"],
+      "css": ["src/styles/hide.css"],
+      "run_at": "document_start"
+    }
+  ]
+}
