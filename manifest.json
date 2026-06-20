@@ -22,13 +22,17 @@
     }
   },
   "background": {
-    "scripts": ["src/background/background.js"]
+    "scripts": ["src/shared/settings.js", "src/background/background.js"]
   },
   "permissions": ["storage"],
   "content_scripts": [
     {
       "matches": ["https://www.instagram.com/*"],
-      "js": ["src/content/labels.js", "src/content/content.js"],
+      "js": [
+        "src/shared/settings.js",
+        "src/content/labels.js",
+        "src/content/content.js"
+      ],
       "css": ["src/styles/hide.css"],
       "run_at": "document_start"
     }

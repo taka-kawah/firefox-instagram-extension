@@ -1,20 +1,13 @@
 // popup.js
 //
 // ツールバーアイコンを押すと開く小さな設定パネルの動作。
-// チェックボックスの状態を storage に保存するだけ。保存すると、開いている Instagram の
-// タブのコンテンツスクリプトが storage.onChanged で変化を受け取り、即座に表示へ反映する。
+// チェックボックスの状態を共通ユーティリティ(settings.js)経由で保存する。
+// 保存先は storage.sync が優先（別端末にも同期）、使えなければ storage.local。
+// 保存すると、開いている Instagram のタブのコンテンツスクリプトが変化を受け取り、即座に反映する。
 
-const api = typeof browser !== "undefined" ? browser : chrome;
+const KEYS = IFFSettings.KEYS;
 
-const KEYS = ["enabled", "hideSuggestedFeed", "hideReelsNav", "hideExploreGrid"];
-const DEFAULTS = {
-  enabled: true,
-  hideSuggestedFeed: true,
-  hideReelsNav: true,
-  hideExploreGrid: true,
-};
-
-// 全体オフのときは、個別トグルを操作不能（グレーアウト）にして分かりやすくする。
+// 全体OFFのときは、個別トグルを操作不能（グレーアウト）にして分かりやすくする。
 function updateDisabledState(enabled) {
   document.getElementById("group").classList.toggle("disabled", !enabled);
   ["hideSuggestedFeed", "hideReelsNav", "hideExploreGrid"].forEach((k) => {
@@ -23,13 +16,7 @@ function updateDisabledState(enabled) {
 }
 
 async function load() {
-  let stored = {};
-  try {
-    stored = await api.storage.local.get(KEYS);
-  } catch (e) {
-    stored = {};
-  }
-  const s = { ...DEFAULTS, ...stored };
+  const s = await IFFSettings.load();
   KEYS.forEach((k) => {
     document.getElementById(k).checked = !!s[k];
   });
@@ -38,7 +25,7 @@ async function load() {
 
 KEYS.forEach((k) => {
   document.getElementById(k).addEventListener("change", async (e) => {
-    await api.storage.local.set({ [k]: e.target.checked });
+    await IFFSettings.save({ [k]: e.target.checked });
     if (k === "enabled") updateDisabledState(e.target.checked);
   });
 });

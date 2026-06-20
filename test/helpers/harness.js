@@ -19,34 +19,49 @@ function readSrc(relPath) {
   return fs.readFileSync(path.join(ROOT, relPath), "utf8");
 }
 
-// テスト用の storage モック。
-// 実際のブラウザ storage と同じく get/set でき、set 時には onChanged リスナーへ
-// 変更内容を通知する（content.js のリアルタイム反映をテストできるようにするため）。
-function createBrowserMock(initial = {}) {
-  const store = { ...initial };
+// テスト用の storage モック。sync / local の2つの保存領域を持ち、
+// set 時には onChanged リスナーへ「どちらの領域が変わったか(area名)」付きで通知する。
+//
+//   createBrowserMock(initialSync, { local, syncAvailable })
+//     initialSync   … sync 領域の初期値（既定の保存先なので、ここに設定を入れる）
+//     local         … local 領域の初期値
+//     syncAvailable … false にすると storage.sync を生やさない（sync 非対応環境の再現）
+function createBrowserMock(initialSync = {}, opts = {}) {
+  const { local = {}, syncAvailable = true } = opts;
+  const stores = { sync: { ...initialSync }, local: { ...local } };
   const listeners = [];
+
+  function emit(changes, area) {
+    for (const fn of listeners) fn(changes, area);
+  }
+
+  function makeArea(area) {
+    return {
+      async get(keys) {
+        const store = stores[area];
+        if (!keys) return { ...store };
+        const keyList = Array.isArray(keys) ? keys : [keys];
+        const out = {};
+        for (const k of keyList) {
+          if (k in store) out[k] = store[k];
+        }
+        return out;
+      },
+      async set(obj) {
+        const store = stores[area];
+        const changes = {};
+        for (const k of Object.keys(obj)) {
+          changes[k] = { oldValue: store[k], newValue: obj[k] };
+          store[k] = obj[k];
+        }
+        emit(changes, area);
+      },
+    };
+  }
 
   const api = {
     storage: {
-      local: {
-        async get(keys) {
-          if (!keys) return { ...store };
-          const keyList = Array.isArray(keys) ? keys : [keys];
-          const out = {};
-          for (const k of keyList) {
-            if (k in store) out[k] = store[k];
-          }
-          return out;
-        },
-        async set(obj) {
-          const changes = {};
-          for (const k of Object.keys(obj)) {
-            changes[k] = { oldValue: store[k], newValue: obj[k] };
-            store[k] = obj[k];
-          }
-          for (const fn of listeners) fn(changes, "local");
-        },
-      },
+      local: makeArea("local"),
       onChanged: {
         addListener(fn) {
           listeners.push(fn);
@@ -57,14 +72,13 @@ function createBrowserMock(initial = {}) {
       onInstalled: { addListener() {} },
     },
     // テストから直接ストアを覗く/操作するための補助（拡張機能本体は使わない）
-    __store: store,
-    __emit(changes, area = "local") {
-      for (const fn of listeners) fn(changes, area);
-    },
+    __stores: stores,
+    __emit: emit,
     __listenerCount() {
       return listeners.length;
     },
   };
+  if (syncAvailable) api.storage.sync = makeArea("sync");
   return api;
 }
 

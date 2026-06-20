@@ -12,16 +12,9 @@
 (() => {
   "use strict";
 
-  // Firefox は browser.*、Chrome 系は chrome.* を使う。どちらでも動くように吸収する。
-  const api = typeof browser !== "undefined" ? browser : chrome;
-
-  // 設定のデフォルト値（拡張機能を入れた直後はすべて有効）
-  const DEFAULTS = {
-    enabled: true, // 拡張機能全体のオン/オフ
-    hideSuggestedFeed: true, // ホームのおすすめ投稿を隠す
-    hideReelsNav: true, // 左メニューのリール導線を隠す
-    hideExploreGrid: true, // 発見ページのおすすめグリッドを隠す
-  };
+  // 設定の保存・読み込み・監視は共通ユーティリティ（settings.js）に集約。
+  // 保存先は storage.sync を優先し、使えない環境では storage.local にフォールバックする。
+  const DEFAULTS = IFFSettings.DEFAULTS;
 
   let settings = { ...DEFAULTS };
   const root = document.documentElement; // <html> 要素
@@ -114,23 +107,16 @@
   // --- 設定の読み込みと監視 -------------------------------------------------
 
   async function loadSettings() {
-    try {
-      const stored = await api.storage.local.get(Object.keys(DEFAULTS));
-      settings = { ...DEFAULTS, ...stored };
-    } catch (e) {
-      settings = { ...DEFAULTS };
-    }
+    settings = await IFFSettings.load();
   }
 
-  if (api.storage && api.storage.onChanged) {
-    api.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== "local") return;
-      for (const key in changes) {
-        settings[key] = changes[key].newValue;
-      }
-      applyAll();
-    });
-  }
+  // sync / local どちらの変更も拾って即時反映する。
+  IFFSettings.onChanged((changes) => {
+    for (const key in changes) {
+      settings[key] = changes[key].newValue;
+    }
+    applyAll();
+  });
 
   // --- 起動 -----------------------------------------------------------------
 
