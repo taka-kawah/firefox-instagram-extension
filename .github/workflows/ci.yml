@@ -1,0 +1,36 @@
+name: CI
+
+# プルリクエストと main への push のたびに、自動でテストを実行する。
+# このジョブが失敗している間はマージできないようにするには、リポジトリの
+# Settings → Branches → Branch protection rules で、必須ステータスチェックとして
+# 下の job 名「test」を指定してください（手順は PR 本文に記載）。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同じブランチで新しい push があったら、古い実行はキャンセルする（無駄打ち防止）。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test

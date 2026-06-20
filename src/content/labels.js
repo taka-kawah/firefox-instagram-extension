@@ -38,3 +38,10 @@ const IFF_SUGGESTED_LABELS = new Set([
   "为你推荐",
   "為你推薦",
 ]);
+
+// テスト（Node.js）からも辞書を参照できるようにするためのエクスポート。
+// ブラウザのコンテンツスクリプトとして読み込まれる場合は `module` が存在しないため、
+// この行は実行されず、拡張機能の動作には一切影響しない。
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { IFF_SUGGESTED_LABELS };
+}
