@@ -70,6 +70,7 @@ function createBrowserMock(initialSync = {}, opts = {}) {
     },
     runtime: {
       onInstalled: { addListener() {} },
+      getURL: (p) => "chrome-extension://test-extension/" + p,
     },
     // テストから直接ストアを覗く/操作するための補助（拡張機能本体は使わない）
     __stores: stores,

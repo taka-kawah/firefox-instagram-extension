@@ -19,6 +19,41 @@
   let settings = { ...DEFAULTS };
   const root = document.documentElement; // <html> 要素
 
+  // --- 方式B: ページ本体（メインワールド）へインターセプタを注入する ----------
+  // content script は隔離された世界で動くため、Instagram 自身の JSON.parse などは
+  // フックできない。そこで web_accessible_resource のスクリプトを <script> として
+  // ページに差し込み、描画前にフィードJSONからおすすめ/広告を除去する。
+  const runtimeApi = typeof browser !== "undefined" ? browser : chrome;
+
+  function injectInterceptor() {
+    try {
+      const url = runtimeApi.runtime.getURL("src/page/interceptor.js");
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = false; // できるだけ早く（他のページスクリプトより前に）実行させる
+      (document.head || document.documentElement).appendChild(script);
+      script.addEventListener("load", () => script.remove());
+    } catch (e) {
+      // 注入に失敗しても方式A（DOM後処理）で動作するので致命的ではない。
+    }
+  }
+
+  // ページ側インターセプタへ現在の設定（有効か・おすすめ非表示か）を伝える。
+  function postSettingsToPage() {
+    try {
+      window.postMessage(
+        {
+          __iffChannel: "settings",
+          enabled: settings.enabled,
+          hideSuggestedFeed: settings.hideSuggestedFeed,
+        },
+        "*"
+      );
+    } catch (e) {
+      /* noop */
+    }
+  }
+
   // --- ユーティリティ -------------------------------------------------------
 
   // 発見（Explore）ページの「トップ（おすすめ一覧）」を表示しているかどうか。
@@ -116,13 +151,17 @@
       settings[key] = changes[key].newValue;
     }
     applyAll();
+    postSettingsToPage(); // ページ側インターセプタにも反映
   });
 
   // --- 起動 -----------------------------------------------------------------
 
   (async function init() {
+    injectInterceptor(); // できるだけ早くページ側フックを仕込む（チラつき低減）
+
     await loadSettings();
     applyRootFlags(); // CSS 系はできるだけ早く反映（チラつき軽減）
+    postSettingsToPage(); // 読み込んだ設定をページ側へ伝える
 
     const start = () => {
       run();
