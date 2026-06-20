@@ -1,0 +1,31 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; background:#fafafa; color:#111; display:flex; }
+nav { width: 245px; height: 100vh; position: sticky; top:0; border-right:1px solid #dbdbdb; background:#fff; padding:16px 12px; }
+nav .logo { font-weight:700; font-size:22px; padding:12px 12px 24px; }
+nav a { display:flex; align-items:center; gap:14px; padding:12px; border-radius:10px; color:#111; text-decoration:none; font-size:15px; }
+nav a:hover { background:#f2f2f2; }
+nav a .ic { width:24px; height:24px; display:inline-block; }
+main { flex:1; max-width:none; padding:24px; display:flex; flex-direction:column; align-items:center; }
+.feed { width:470px; }
+article { background:#fff; border:1px solid #dbdbdb; border-radius:10px; margin-bottom:24px; overflow:hidden; }
+article .head { display:flex; align-items:center; gap:10px; padding:12px 14px; }
+article .avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(45deg,#feda75,#d62976,#4f5bd5); }
+article .uname { font-weight:600; font-size:14px; }
+article .sub { font-size:12px; color:#737373; display:block; }
+article .photo { height:360px; background:#efefef; display:flex; align-items:center; justify-content:center; color:#bbb; font-size:14px; }
+article .photo.g1{background:linear-gradient(135deg,#a1c4fd,#c2e9fb);}
+article .photo.g2{background:linear-gradient(135deg,#fbc2eb,#a6c1ee);}
+article .photo.g3{background:linear-gradient(135deg,#d4fc79,#96e6a1);}
+article .photo.g4{background:linear-gradient(135deg,#ffecd2,#fcb69f);}
+article .cap { padding:10px 14px 16px; font-size:14px; }
+.suglabel { font-size:12px; color:#737373; }
+/* explore */
+.explore-wrap{width:935px;}
+.searchbar{margin:8px 0 22px;}
+.searchbar input{width:100%;padding:12px 16px;border:1px solid #dbdbdb;border-radius:10px;background:#efefef;font-size:15px;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.grid a{display:block;height:300px;text-decoration:none;}
+.grid a:nth-child(3n+1){background:linear-gradient(135deg,#a1c4fd,#c2e9fb);}
+.grid a:nth-child(3n+2){background:linear-gradient(135deg,#fbc2eb,#a6c1ee);}
+.grid a:nth-child(3n+3){background:linear-gradient(135deg,#d4fc79,#96e6a1);}
+.pagetitle{font-size:13px;color:#737373;margin-bottom:14px;}
