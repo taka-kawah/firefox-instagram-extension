@@ -80,23 +80,42 @@ if (labelSet.has(text)) { article.style.setProperty("display","none","important"
 
 ### ここで最大のハマりどころ（バックエンドの人がザワつくポイント）
 
-- **content scriptはページ本体とJS世界が隔離されている**（isolated world）。
-  → だから**ページの`JSON.parse`を上書きできない**。同じ`window`に見えて別物。
-- 解決: **`<script>`タグをページに注入して“メインワールド”で動かす**。これは `web_accessible_resources` として公開したJSファイル。
+**やりたいこと**: Instagram のコードが `JSON.parse(...)` を呼ぶ瞬間に割り込みたい。普通の monkey patch のノリで、こう書けば勝ちだと思いますよね:
 
 ```js
-// content script（隔離世界）→ ページ本体（メインワールド）へ橋を架ける
+const orig = JSON.parse;
+JSON.parse = (t, r) => filter(orig(t, r));   // ← content script で書いても…効かない！
+```
+
+**ところが content script でこれを書いても、Instagram の `JSON.parse` は差し替わりません。** ここで言いたいのが「isolated world」です。具体的にはこういうこと:
+
+- content script と ページ本体は、**同じ DOM（`document`）は共有**するが、**JavaScript の実行コンテキスト（グローバル・組み込みオブジェクトの実体）は別々**。
+  - 例: ページが `window.foo = 1` してても、content script から `window.foo` を見ると **`undefined`**。逆も同じ。変数が互いに見えない。
+  - `JSON` や `fetch` のような**組み込みも“別の実体”を握っている**。content script が握る `JSON.parse` と、Instagram が握る `JSON.parse` は**別オブジェクト**。
+- なので content script で `JSON.parse = ...` しても、**書き換わるのは content script 側の `JSON` だけ**。Instagram のコードは自分側の元の `JSON.parse` を呼び続ける → **素通り**。
+- （Firefox ではこの隔離が "Xray wrapper" という仕組みで、content script からページのオブジェクトに加えた変更が**ページ側へ伝播しない**ようになっている。セキュリティのため＝ページが拡張のコードを覗いたり汚染したりできないように、わざとこうなっている）
+
+> バックエンド脳での例え: **DB（=DOM）は共有してるが、プロセス（=JSヒープ）が別の2プロセス**。自分のプロセスで関数ポインタを差し替えても、もう一方のプロセスの関数ポインタは変わらない。相手のランタイムを monkey patch したければ、**相手のプロセスの中でコードを動かす**しかない。
+
+**解決策**: ページの DOM に**実際に `<script>` 要素を挿し込む**。すると、その中身は **Instagram と同じ世界（メインワールド）でブラウザに実行される**。同じ `JSON` を握れるので、ここで差し替えれば本当に効く。`<script>` の中身は `web_accessible_resources` として公開した JS ファイル。
+
+```js
+// content script（隔離世界）: 自分では JSON.parse を差し替えられないので、
+// ページ本体に「実行してもらう」スクリプトを挿し込む = 世界をまたぐ橋を架ける
 const url = browser.runtime.getURL("src/page/interceptor.js");
-document.documentElement.appendChild(Object.assign(document.createElement("script"), { src: url }));
+document.documentElement.appendChild(
+  Object.assign(document.createElement("script"), { src: url })
+);
 ```
 
 ```js
-// interceptor.js（メインワールドで実行）: ここで初めて本物のJSON.parseを差し替えられる
+// interceptor.js（メインワールド = Instagram と同じ世界で実行される）
+// ここで握る JSON は Instagram が使うのと“同じ実体”。だから差し替えが効く
 const orig = window.JSON.parse;
 window.JSON.parse = (t, r) => maybeFilter(orig.call(this, t, r)); // edgesからおすすめ/広告を除去
 ```
 
-- 設定（ON/OFF）は**世界をまたぐので`window.postMessage`で渡す**。
+- ただし橋を架けた代償として、**設定(ON/OFF)は世界をまたぐ**ことに。content script ↔ interceptor の通信は **`window.postMessage`**（同一オリジン内のメッセージング）で渡す。
 - 一言: **「サーバーのレスポンスに介入するインターセプタを、ブラウザ内でMonkey patchしてる、という話」**
 - 安全側設計: 明確なマーカー(`explore_story`/`is_sponsored`等)だけ消す。フィード以外のJSONは`edges`が無いので無傷。例外時は素通し。**方式Aもフォールバックで残す**（壊れたら後段で拾う）。
 
