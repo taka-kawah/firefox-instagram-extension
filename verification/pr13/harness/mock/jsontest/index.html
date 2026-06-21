@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Method B (suggested vs sponsored)</title>
+<style>
+  body{font-family:-apple-system,"Hiragino Sans",Meiryo,sans-serif;padding:28px;font-size:15px;line-height:1.8;color:#111}
+  h1{font-size:18px}
+  .box{border:1px solid #dbdbdb;border-radius:10px;padding:14px 18px;margin:14px 0;background:#fafafa}
+  .k{color:#737373}.g{color:#070}
+  code{background:#eee;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+  <h1>方式B（JSON）— おすすめ／広告の独立トグル</h1>
+  <p class="k">フィードJSON（フォロー1＋おすすめ1(explore_story)＋広告1(is_sponsored)＝計3件）を
+  <code>JSON.parse</code> し、残った件数を表示します。</p>
+  <div class="box"><b>遅延パース（2秒後）</b>: <span id="delayed" class="g">...</span></div>
+  <p class="k">既定（おすすめ非表示ON／広告非表示OFF）なら <b>2件</b>（フォロー＋広告）。
+  広告非表示もONなら <b>1件</b>（フォローのみ）。</p>
+
+  <script>
+    var FEED = JSON.stringify({
+      data: { feed: { edges: [
+        { node: { id: "follow-1" } },
+        { node: { explore_story: { id: "s1" } } },
+        { node: { id: "ad-1", media: { is_sponsored: true } } }
+      ] } }
+    });
+    function describe(p){
+      var e=p.data.feed.edges;
+      return e.length+" 件 ["+e.map(function(x){
+        if(x.node&&x.node.explore_story) return "おすすめ";
+        if(x.node&&x.node.media&&x.node.media.is_sponsored) return "広告";
+        return x.node?x.node.id:"?";
+      }).join(", ")+"]";
+    }
+    setTimeout(function(){
+      document.getElementById("delayed").textContent = describe(JSON.parse(FEED));
+    }, 2000);
+  </script>
+</body>
+</html>

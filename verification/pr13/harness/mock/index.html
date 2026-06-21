@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instagram (mock home)</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">Instagram</div>
+    <a href="/"><span class="ic">🏠</span><span>ホーム</span></a>
+    <a href="/explore/search/"><span class="ic">🔍</span><span>検索</span></a>
+    <a href="/explore/"><span class="ic">🧭</span><span>発見</span></a>
+    <a href="/reels/"><span class="ic">🎬</span><span>リール</span></a>
+    <a href="/messages/"><span class="ic">✉️</span><span>メッセージ</span></a>
+    <a href="/myprofile/"><span class="ic">👤</span><span>プロフィール</span></a>
+  </nav>
+
+  <main>
+    <div class="feed">
+      <!-- 通常: フォロー中ユーザーの投稿 -->
+      <article>
+        <div class="head">
+          <div class="avatar"></div>
+          <div><span class="uname">friend_taro</span></div>
+        </div>
+        <div class="photo g1">フォロー中の投稿</div>
+        <div class="cap"><b>friend_taro</b> 今日の散歩 🐕</div>
+      </article>
+
+      <!-- おすすめ投稿（日本語ラベル） -->
+      <article>
+        <div class="head">
+          <div class="avatar"></div>
+          <div>
+            <span class="uname">random_brand_jp</span>
+            <span class="sub suglabel">おすすめ</span>
+          </div>
+        </div>
+        <div class="photo g2">おすすめ投稿（日本語）</div>
+        <div class="cap"><b>random_brand_jp</b> セール開催中！</div>
+      </article>
+
+      <!-- 通常: フォロー中ユーザーの投稿 -->
+      <article>
+        <div class="head">
+          <div class="avatar"></div>
+          <div><span class="uname">friend_hanako</span></div>
+        </div>
+        <div class="photo g3">フォロー中の投稿</div>
+        <div class="cap"><b>friend_hanako</b> ランチなう 🍝</div>
+      </article>
+
+      <!-- おすすめ投稿（英語ラベル） -->
+      <article>
+        <div class="head">
+          <div class="avatar"></div>
+          <div>
+            <span class="uname">unknown_account_en</span>
+            <span class="sub suglabel">Suggested for you</span>
+          </div>
+        </div>
+        <div class="photo g4">Suggested post (EN)</div>
+        <div class="cap"><b>unknown_account_en</b> Check this out</div>
+      </article>
+
+      <!-- 広告（Sponsored）投稿 -->
+      <article id="post-sponsored">
+        <div class="head">
+          <div class="avatar"></div>
+          <div>
+            <span class="uname">some_brand_ad</span>
+            <span class="sub suglabel">Sponsored</span>
+          </div>
+        </div>
+        <div class="photo g1">Sponsored ad post</div>
+        <div class="cap"><b>some_brand_ad</b> Buy now!</div>
+      </article>
+    </div>
+  </main>
+</body>
+</html>
