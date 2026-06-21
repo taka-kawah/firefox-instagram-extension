@@ -63,6 +63,21 @@ test("ホームでは発見ページ用の目印は付かない", async () => {
   window.close();
 });
 
+test("既定（広告除去OFF）では Sponsored 投稿は隠れない", async () => {
+  const { document, window } = await setupHome();
+  assert.ok(!isHidden(document.getElementById("post-sponsored")), "既定では広告は隠さない");
+  window.close();
+});
+
+test("広告除去ONにすると Sponsored 投稿が隠れる", async () => {
+  const { document, window } = await setupHome({ hideSponsored: true });
+  assert.ok(isHidden(document.getElementById("post-sponsored")), "広告投稿が隠れる");
+  // おすすめ投稿は引き続き隠れ、フォロー投稿は残る
+  assert.ok(isHidden(document.getElementById("post-suggested-ja")));
+  assert.ok(!isHidden(document.getElementById("post-follow-1")));
+  window.close();
+});
+
 test("発見ページ(/explore/)では explore の目印が付き、検索バーは残る", async () => {
   const browser = createBrowserMock();
   const { document, window } = loadInWindow({

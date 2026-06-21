@@ -8,23 +8,55 @@ const assert = require("node:assert/strict");
 
 const {
   isSuggestedEdge,
+  isSponsoredEdge,
   filterFeedJson,
   maybeFilter,
   __state,
 } = require("../../src/page/interceptor.js");
 
-test("isSuggestedEdge: おすすめ/広告マーカーを検知する", () => {
+test("isSuggestedEdge: おすすめマーカーを検知する", () => {
   assert.equal(isSuggestedEdge({ node: { explore_story: {} } }), true, "explore_story はおすすめ");
   assert.equal(isSuggestedEdge({ node: { suggested_users: [] } }), true, "suggested_users はおすすめ");
-  assert.equal(isSuggestedEdge({ injected: {} }), true, "injected ユニットは除去対象");
-  assert.equal(isSuggestedEdge({ node: { media: { is_sponsored: true } } }), true, "広告は除去対象");
+  assert.equal(isSuggestedEdge({ injected: {} }), true, "injected ユニットはおすすめ扱い");
 });
 
-test("isSuggestedEdge: 通常のフォロー投稿は残す", () => {
-  assert.equal(isSuggestedEdge({ node: { id: "123", media: { is_sponsored: false } } }), false);
-  assert.equal(isSuggestedEdge({ node: { id: "456" } }), false);
+test("isSponsoredEdge: 広告マーカーを検知する", () => {
+  assert.equal(isSponsoredEdge({ node: { media: { is_sponsored: true } } }), true, "is_sponsored は広告");
+  assert.equal(isSponsoredEdge({ node: { is_ad: true } }), true, "is_ad は広告");
+  assert.equal(isSponsoredEdge({ node: { ad: {} } }), true, "ad は広告");
+});
+
+test("各判定: 通常のフォロー投稿は残す", () => {
+  const followEdge = { node: { id: "123", media: { is_sponsored: false } } };
+  assert.equal(isSuggestedEdge(followEdge), false);
+  assert.equal(isSponsoredEdge(followEdge), false);
   assert.equal(isSuggestedEdge(null), false);
-  assert.equal(isSuggestedEdge({}), false);
+  assert.equal(isSponsoredEdge({}), false);
+});
+
+test("filterFeedJson: options で広告のみ・おすすめのみを切り替えられる", () => {
+  const make = () => ({
+    edges: [
+      { node: { id: "follow" } },
+      { node: { explore_story: {} } },
+      { node: { media: { is_sponsored: true } } },
+    ],
+  });
+
+  // おすすめのみ除去（広告は残す）
+  const a = make();
+  filterFeedJson(a, { suggested: true, sponsored: false });
+  assert.equal(a.edges.length, 2);
+
+  // 広告のみ除去（おすすめは残す）
+  const b = make();
+  filterFeedJson(b, { suggested: false, sponsored: true });
+  assert.equal(b.edges.length, 2);
+
+  // 両方除去
+  const c = make();
+  filterFeedJson(c, { suggested: true, sponsored: true });
+  assert.equal(c.edges.length, 1);
 });
 
 test("filterFeedJson: edges 配列からおすすめ/広告を取り除き、通常投稿は残す", () => {

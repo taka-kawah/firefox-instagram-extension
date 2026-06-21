@@ -10,7 +10,7 @@ const KEYS = IFFSettings.KEYS;
 // 全体OFFのときは、個別トグルを操作不能（グレーアウト）にして分かりやすくする。
 function updateDisabledState(enabled) {
   document.getElementById("group").classList.toggle("disabled", !enabled);
-  ["hideSuggestedFeed", "hideReelsNav", "hideExploreGrid"].forEach((k) => {
+  ["hideSuggestedFeed", "hideReelsNav", "hideExploreGrid", "hideSponsored"].forEach((k) => {
     document.getElementById(k).disabled = !enabled;
   });
 }

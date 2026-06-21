@@ -46,6 +46,7 @@
           __iffChannel: "settings",
           enabled: settings.enabled,
           hideSuggestedFeed: settings.hideSuggestedFeed,
+          hideSponsored: settings.hideSponsored,
         },
         "*"
       );
@@ -78,39 +79,50 @@
     setFlag("data-iff-hide-explore", on && settings.hideExploreGrid && isExploreTop());
   }
 
-  // --- (1) ホームのおすすめ投稿を判定して隠す ------------------------------
+  // --- (1) ホームのおすすめ/広告投稿を判定して隠す --------------------------
 
-  // 1件の投稿(<article>)が「おすすめ投稿」かどうかを、ラベル文字列の完全一致で判定する。
-  function articleIsSuggested(article) {
-    // 末端の小さなテキスト要素だけを見る（キャプションなど長い本文は対象外にして誤検出を防ぐ）
+  // 1件の投稿(<article>)が、渡したラベル辞書のいずれかと完全一致するテキストを
+  // 持つかどうかを判定する（キャプションなど長い本文は対象外にして誤検出を防ぐ）。
+  function articleMatchesLabels(article, labelSet) {
     const candidates = article.querySelectorAll("span, div, h1, h2, h3, a");
     for (const el of candidates) {
       if (el.childElementCount > 0) continue; // 子要素を持つ＝ラベルそのものではないので飛ばす
       const text = (el.textContent || "").trim();
       if (!text || text.length > 40) continue; // ラベルは短い
-      if (IFF_SUGGESTED_LABELS.has(text)) return true;
+      if (labelSet.has(text)) return true;
     }
     return false;
   }
 
   function filterFeed() {
-    if (!settings.enabled || !settings.hideSuggestedFeed) return;
+    if (!settings.enabled) return;
+    if (!settings.hideSuggestedFeed && !settings.hideSponsored) return;
     const articles = document.querySelectorAll("article");
     for (const article of articles) {
-      if (article.hasAttribute("data-iff-suggested")) continue; // 既に隠した投稿はスキップ
-      if (articleIsSuggested(article)) {
+      // 既に隠した投稿はスキップ
+      if (article.hasAttribute("data-iff-suggested") || article.hasAttribute("data-iff-sponsored")) {
+        continue;
+      }
+      if (settings.hideSuggestedFeed && articleMatchesLabels(article, IFF_SUGGESTED_LABELS)) {
         article.setAttribute("data-iff-suggested", "1");
+        article.style.setProperty("display", "none", "important");
+      } else if (settings.hideSponsored && articleMatchesLabels(article, IFF_SPONSORED_LABELS)) {
+        article.setAttribute("data-iff-sponsored", "1");
         article.style.setProperty("display", "none", "important");
       }
     }
   }
 
-  // おすすめ非表示をオフにしたときに、隠していた投稿を元に戻す。
+  // 隠していた投稿（おすすめ・広告とも）をすべて元に戻す。
+  // 設定変更時にいったん全部戻してから、現在の設定で貼り直すために使う。
   function restoreHiddenFeed() {
-    document.querySelectorAll("article[data-iff-suggested]").forEach((a) => {
-      a.style.removeProperty("display");
-      a.removeAttribute("data-iff-suggested");
-    });
+    document
+      .querySelectorAll("article[data-iff-suggested], article[data-iff-sponsored]")
+      .forEach((a) => {
+        a.style.removeProperty("display");
+        a.removeAttribute("data-iff-suggested");
+        a.removeAttribute("data-iff-sponsored");
+      });
   }
 
   // --- まとめて実行 ---------------------------------------------------------
@@ -134,8 +146,10 @@
   const observer = new MutationObserver(schedule);
 
   // 設定が変わったときに全体を再評価する。
+  // いったん隠した投稿をすべて戻してから、現在の設定で貼り直す（おすすめ/広告の
+  // それぞれのトグルをOFFにしたときに、確実に元へ戻るようにするため）。
   function applyAll() {
-    if (!settings.enabled || !settings.hideSuggestedFeed) restoreHiddenFeed();
+    restoreHiddenFeed();
     run();
   }
 

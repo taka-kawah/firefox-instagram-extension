@@ -17,46 +17,61 @@
   // ---- 設定フラグ（content script から postMessage で受け取る）----------------
   // 既定は「有効」。多くのユーザーは有効なので、メッセージ到着前の初回リクエストにも
   // フィルタが効くようにしておく（チラつき低減を最優先）。
-  const state = { enabled: true, hideSuggestedFeed: true };
+  const state = { enabled: true, hideSuggestedFeed: true, hideSponsored: false };
 
   // ---- 純粋ロジック（テスト可能）--------------------------------------------
 
-  // 1件のフィードアイテム（edge）が「おすすめ/広告」かどうかを保守的に判定する。
+  // 1件のフィードアイテム（edge）が「おすすめ」かどうかを保守的に判定する。
   function isSuggestedEdge(edge) {
     if (!edge || typeof edge !== "object") return false;
-    if (edge.injected) return true; // 広告/おすすめの差し込みユニット
+    if (edge.injected) return true; // おすすめ/広告の差し込みユニット
     const node = edge.node;
     if (!node || typeof node !== "object") return false;
     if (node.injected) return true;
     if (node.explore_story) return true; // フォロー外からのおすすめ投稿
     if (node.suggested_users) return true; // おすすめユーザーカード
-    const media = node.media && typeof node.media === "object" ? node.media : node;
-    if (media && media.is_sponsored === true) return true; // 広告
     return false;
   }
 
-  // 任意の JSON を再帰的に走査し、"edges" 配列からおすすめ/広告アイテムを取り除く。
+  // 1件のフィードアイテム（edge）が「広告（Sponsored）」かどうかを判定する。
+  function isSponsoredEdge(edge) {
+    if (!edge || typeof edge !== "object") return false;
+    const node = edge.node;
+    if (!node || typeof node !== "object") return false;
+    if (node.ad || node.is_ad === true) return true;
+    const media = node.media && typeof node.media === "object" ? node.media : node;
+    if (media && media.is_sponsored === true) return true;
+    return false;
+  }
+
+  // 任意の JSON を再帰的に走査し、"edges" 配列から不要アイテムを取り除く。
+  // options で「おすすめ」「広告」のどちらを除去するか切り替える。
   // - 元データを破壊的に変更しつつ、同じ参照を返す（呼び出し側が使いやすいように）。
   // - フィード以外の JSON は実質変化しない（"edges" を持たないため）。
-  function filterFeedJson(data, _seen) {
+  function filterFeedJson(data, options, _seen) {
+    const opts = options || { suggested: true, sponsored: true };
     if (!data || typeof data !== "object") return data;
     const seen = _seen || new Set();
     if (seen.has(data)) return data; // 循環参照対策
     seen.add(data);
 
     if (Array.isArray(data)) {
-      for (const item of data) filterFeedJson(item, seen);
+      for (const item of data) filterFeedJson(item, opts, seen);
       return data;
     }
 
     for (const key of Object.keys(data)) {
       const value = data[key];
       if (key === "edges" && Array.isArray(value)) {
-        data[key] = value.filter((edge) => !isSuggestedEdge(edge));
+        data[key] = value.filter((edge) => {
+          if (opts.suggested && isSuggestedEdge(edge)) return false;
+          if (opts.sponsored && isSponsoredEdge(edge)) return false;
+          return true;
+        });
         // 残った edge の内部もさらに走査
-        for (const edge of data[key]) filterFeedJson(edge, seen);
+        for (const edge of data[key]) filterFeedJson(edge, opts, seen);
       } else {
-        filterFeedJson(value, seen);
+        filterFeedJson(value, opts, seen);
       }
     }
     return data;
@@ -64,10 +79,12 @@
 
   // フィルタを適用すべきか（設定とデータ型のガード）。
   function maybeFilter(value) {
-    if (!state.enabled || !state.hideSuggestedFeed) return value;
+    if (!state.enabled) return value;
+    const opts = { suggested: state.hideSuggestedFeed, sponsored: state.hideSponsored };
+    if (!opts.suggested && !opts.sponsored) return value;
     if (!value || typeof value !== "object") return value;
     try {
-      return filterFeedJson(value);
+      return filterFeedJson(value, opts);
     } catch (e) {
       return value; // 何かあっても元データはそのまま通す（壊さない）
     }
@@ -98,13 +115,14 @@
       if (!msg || msg.__iffChannel !== "settings") return;
       if (typeof msg.enabled === "boolean") state.enabled = msg.enabled;
       if (typeof msg.hideSuggestedFeed === "boolean") state.hideSuggestedFeed = msg.hideSuggestedFeed;
+      if (typeof msg.hideSponsored === "boolean") state.hideSponsored = msg.hideSponsored;
     });
   }
 
   // Node（テスト）では純粋ロジックだけをエクスポートし、フックは行わない。
   // ブラウザのページ文脈ではフックを仕掛ける。
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { isSuggestedEdge, filterFeedJson, maybeFilter, __state: state };
+    module.exports = { isSuggestedEdge, isSponsoredEdge, filterFeedJson, maybeFilter, __state: state };
   } else if (typeof window !== "undefined" && window.JSON) {
     installHooks(window);
   }
