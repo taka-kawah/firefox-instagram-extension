@@ -3,8 +3,16 @@ name: Release
 # main にマージ（push）されたら、配布用の .xpi をビルドして
 # GitHub の Releases ページに公開する。手動実行（workflow_dispatch）も可能。
 #
-# タグ／リリース名は manifest.json の version を使う（例: v0.1.0）。
-# 同じ version のまま再度 main に push された場合は、既存リリースの .xpi を更新する。
+# 署名について:
+#   - GitHub Secrets に AMO の API キー（AMO_JWT_ISSUER / AMO_JWT_SECRET）が登録されていれば、
+#     web-ext sign --channel=unlisted で「自己配布（unlisted）署名」を行う。
+#     これは公開リストにも載らず審査もない、自分用の署名。通常版 Firefox に恒久インストールできる。
+#   - キー未登録の間は未署名ビルドを公開する（後でキーを入れれば自動で署名版に切り替わる）。
+#
+# バージョン運用:
+#   - タグ／リリース名は manifest.json の version（例: v0.1.0）。
+#   - その version の Release が既にある場合はスキップする。
+#     （AMO は同一 version の再署名を拒否するため、新バージョンに上げたときだけ公開する）
 
 on:
   push:
@@ -37,14 +45,52 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build .xpi
-        run: npx web-ext build --filename "instagram-focus-filter-{version}.xpi" --overwrite-dest
-
       - name: Read version from manifest
         id: ver
         run: echo "version=$(node -p "require('./manifest.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Skip if this version is already released
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.ver.outputs.version }}" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release v${{ steps.ver.outputs.version }} already exists. Bump manifest.json version to publish a new one."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decide signing vs unsigned build
+        if: steps.rel.outputs.exists == 'false'
+        id: mode
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+        run: |
+          if [ -n "$AMO_JWT_ISSUER" ]; then
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::AMO_JWT_ISSUER secret not set — publishing an UNSIGNED .xpi. Add AMO_JWT_ISSUER / AMO_JWT_SECRET secrets to publish a signed (unlisted) build."
+          fi
+
+      - name: Sign (unlisted) with web-ext
+        if: steps.rel.outputs.exists == 'false' && steps.mode.outputs.sign == 'true'
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx web-ext sign \
+            --channel=unlisted \
+            --api-key="$AMO_JWT_ISSUER" \
+            --api-secret="$AMO_JWT_SECRET"
+
+      - name: Build unsigned .xpi
+        if: steps.rel.outputs.exists == 'false' && steps.mode.outputs.sign == 'false'
+        run: npx web-ext build --filename "instagram-focus-filter-{version}.xpi" --overwrite-dest
+
       - name: Publish to GitHub Releases
+        if: steps.rel.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
@@ -56,7 +102,8 @@ jobs:
 
             下の Assets から `.xpi` をダウンロードできます。
 
-            > ⚠️ この `.xpi` は **未署名** です。通常版の Firefox は未署名アドオンの恒久インストールを
-            > ブロックするため、そのままでは「一時的なアドオン」としての読み込み
-            > （`about:debugging` → このFirefox → 一時的なアドオンを読み込む → この `.xpi` を選択）
-            > での利用になります。恒久インストールには Mozilla(AMO) の署名が必要です。
+            - **署名済み（unlisted）の場合**: 通常版 Firefox にそのまま恒久インストールできます
+              （`.xpi` をダウンロード後、`about:addons` のギアアイコン →「ファイルからアドオンをインストール」）。
+            - **未署名の場合**（AMO の API キー未設定でビルドされたとき）: `about:debugging` →
+              このFirefox →「一時的なアドオンを読み込む」で `.xpi` を選択して利用してください
+              （再起動で消えます）。
