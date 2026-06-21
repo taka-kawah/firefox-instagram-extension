@@ -206,11 +206,11 @@ MutationObserver 登録 ──▶ DOM 変化のたびに再フィルタ（冪等
 
 ## 7. 今後のロードマップ
 
-- [ ] **フェーズ1**：MV3 雛形 + 方式A（DOM/CSS/MutationObserver）で 3 機能を実装
-- [ ] **フェーズ2**：ポップアップによる個別トグルと `storage.sync` 同期
-- [ ] **フェーズ3**：方式B（JSON/ネットワークインターセプト）でチラつき低減・精度向上
-- [ ] **フェーズ4**：多言語ラベル辞書の拡充、Sponsored 除去オプション
-- [ ] **フェーズ5**：AMO 申請に向けたパッケージング・プライバシーポリシー整備
+- [x] **フェーズ1**：MV3 雛形 + 方式A（DOM/CSS/MutationObserver）で 3 機能を実装
+- [x] **フェーズ2**：ポップアップによる個別トグルと `storage.sync` 同期
+- [x] **フェーズ3**：方式B（JSON/ネットワークインターセプト）でチラつき低減・精度向上
+- [x] **フェーズ4**：多言語ラベル辞書の拡充、Sponsored 除去オプション
+- [x] **フェーズ5**：AMO 申請に向けたパッケージング・プライバシーポリシー整備（`web-ext` + `PRIVACY.md`）
 
 ---
 
@@ -254,16 +254,19 @@ npm test      # node --test でユニット/統合テストを実行
 
 ### 8.4 配布・常用するためのパッケージ化（.xpi 作成）
 
-一時読み込みではなく恒久的にインストールするには、ZIP 化して `.xpi` を作り、Mozilla の署名を受ける必要があります。
+[`web-ext`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/) を使うと、
+検査・パッケージ化・署名を簡単に行えます（`npm install` 済みであれば追加導入は不要）。
 
 ```bash
-# リポジトリ直下で実行。manifest.json が ZIP の最上位に来るように固める
-zip -r -FS ../instagram-focus-filter.xpi . \
-  -x '.git/*' 'node_modules/*' 'test/*' 'verification/*' '*.md'
+npm run lint    # web-ext lint: manifest や権限の問題を検査（エラー0を確認）
+npm run build   # web-ext build: web-ext-artifacts/ に配布用 zip(.xpi 相当) を生成
+npm start       # web-ext run: 一時プロファイルの Firefox で起動して動作確認
 ```
 
+- 同梱されるのは拡張機能本体（`manifest.json` / `icons/` / `src/`）のみです（`web-ext-config.cjs` で
+  テスト・ドキュメント等を除外しています）。
 - **署名なしの恒久インストールは通常版 Firefox では不可**です。次のいずれかを使います。
-  - **Mozilla Add-ons (AMO) での署名**: [`web-ext`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/) を使うのが簡単です。
+  - **Mozilla Add-ons (AMO) での署名**:
     ```bash
     npx web-ext sign --api-key=<JWT issuer> --api-secret=<JWT secret>
     ```
@@ -271,4 +274,23 @@ zip -r -FS ../instagram-focus-filter.xpi . \
   - **署名不要で常用したい場合**: [Firefox Developer Edition](https://www.mozilla.org/firefox/developer/) または ESR で
     `about:config` の `xpinstall.signatures.required` を `false` にする方法もあります（通常版では不可）。
 
-> パッケージ化・AMO 申請の整備は README ロードマップの**フェーズ5**で本格対応予定です。
+### 8.5 ビルド済み .xpi を Releases から入手する
+
+`main` ブランチに変更がマージされると、GitHub Actions が自動で `.xpi` をビルドし、
+[Releases](https://github.com/taka-kawah/firefox-instagram-extension/releases) ページに公開します
+（タグ＝`manifest.json` の `version`）。自分でビルドしなくても、最新の `.xpi` をそこから入手できます。
+
+- **署名済み（推奨・個人利用OK）**: リポジトリに AMO の API キーを登録しておくと、自動で
+  **unlisted（自己配布）署名**された `.xpi` が公開され、**通常版 Firefox に恒久インストール**できます。
+  公開リスト掲載や手動審査は不要です。設定手順は [`docs/release-signing.md`](docs/release-signing.md) を参照。
+  - インストール: `about:addons` の歯車 →「ファイルからアドオンをインストール…」→ ダウンロードした `.xpi`。
+- **未署名（API キー未登録のとき）**: `about:debugging` →「一時的なアドオンを読み込む」で `.xpi` を
+  選択して利用（再起動で消えます）。
+
+> ℹ️ AMO は同じ `version` の再署名を拒否するため、新しい `.xpi` を出すときは `manifest.json` の
+> `version` を上げてマージしてください。
+
+### 8.6 プライバシー / AMO 申請
+
+- 本拡張機能は個人情報・閲覧履歴を一切収集しません。詳細は [`PRIVACY.md`](PRIVACY.md) を参照。
+- AMO（addons.mozilla.org）への掲載文・チェックリストの下書きは [`docs/amo-listing.md`](docs/amo-listing.md) にあります。
