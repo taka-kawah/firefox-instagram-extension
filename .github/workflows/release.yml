@@ -1,0 +1,62 @@
+name: Release
+
+# main にマージ（push）されたら、配布用の .xpi をビルドして
+# GitHub の Releases ページに公開する。手動実行（workflow_dispatch）も可能。
+#
+# タグ／リリース名は manifest.json の version を使う（例: v0.1.0）。
+# 同じ version のまま再度 main に push された場合は、既存リリースの .xpi を更新する。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GITHUB_TOKEN にリリース作成（アセットのアップロード）権限を与える。
+permissions:
+  contents: write
+
+# 同時に走るリリースを直列化（アセットの競合を防ぐ）。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build .xpi
+        run: npx web-ext build --filename "instagram-focus-filter-{version}.xpi" --overwrite-dest
+
+      - name: Read version from manifest
+        id: ver
+        run: echo "version=$(node -p "require('./manifest.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
+          files: web-ext-artifacts/*.xpi
+          fail_on_unmatched_files: true
+          body: |
+            Instagram フォーカスフィルター **v${{ steps.ver.outputs.version }}** の配布用パッケージです。
+
+            下の Assets から `.xpi` をダウンロードできます。
+
+            > ⚠️ この `.xpi` は **未署名** です。通常版の Firefox は未署名アドオンの恒久インストールを
+            > ブロックするため、そのままでは「一時的なアドオン」としての読み込み
+            > （`about:debugging` → このFirefox → 一時的なアドオンを読み込む → この `.xpi` を選択）
+            > での利用になります。恒久インストールには Mozilla(AMO) の署名が必要です。
